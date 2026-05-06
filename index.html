@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MuleSoft ↔ SAP Connectivity: Stale Connection Issue & Resolution</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f4f6f8;
+    color: #2c3e50;
+    overflow: hidden;
+  }
+  .deck { width: 100vw; height: 100vh; position: relative; }
+  .slide {
+    width: 100%; height: 100%;
+    padding: 50px 70px;
+    display: none;
+    flex-direction: column;
+    background: #ffffff;
+    animation: fadeIn 0.4s ease;
+  }
+  .slide.active { display: flex; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  h1 {
+    font-size: 2.4em;
+    color: #1565c0;
+    margin-bottom: 10px;
+    border-bottom: 3px solid #1565c0;
+    padding-bottom: 12px;
+  }
+  h2 {
+    font-size: 1.4em;
+    color: #e65100;
+    margin: 20px 0 10px 0;
+  }
+  h3 {
+    font-size: 1.1em;
+    color: #2e7d32;
+    margin: 14px 0 6px 0;
+  }
+  p, li {
+    font-size: 1.05em;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    color: #37474f;
+  }
+  ul { margin-left: 24px; margin-bottom: 12px; }
+  .subtitle { font-size: 1.2em; color: #607d8b; margin-bottom: 30px; }
+  .content { flex: 1; overflow-y: auto; padding-right: 10px; }
+  .content::-webkit-scrollbar { width: 8px; }
+  .content::-webkit-scrollbar-track { background: #eceff1; }
+  .content::-webkit-scrollbar-thumb { background: #90a4ae; border-radius: 4px; }
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 14px;
+    border-top: 1px solid #cfd8dc;
+    margin-top: 12px;
+  }
+  .nav-btn {
+    background: #1565c0; color: #ffffff;
+    border: none; padding: 9px 22px;
+    border-radius: 5px; cursor: pointer;
+    font-weight: bold; font-size: 0.95em;
+    transition: background 0.2s;
+  }
+  .nav-btn:hover { background: #0d47a1; }
+  .nav-btn:disabled { background: #b0bec5; color: #eceff1; cursor: not-allowed; }
+  .counter { color: #607d8b; font-size: 0.9em; }
+  .box {
+    background: #f5f9fc;
+    border-left: 4px solid #1565c0;
+    padding: 14px 18px;
+    margin: 10px 0;
+    border-radius: 4px;
+    color: #37474f;
+  }
+  .box.warn { border-left-color: #c62828; background: #fdecea; }
+  .box.good { border-left-color: #2e7d32; background: #e8f5e9; }
+  .box.info { border-left-color: #e65100; background: #fff4e5; }
+  code {
+    background: #eceff1; color: #00695c;
+    padding: 2px 7px; border-radius: 3px;
+    font-family: 'Consolas', monospace; font-size: 0.92em;
+  }
+  pre {
+    background: #f5f7fa; color: #00695c;
+    padding: 14px; border-radius: 5px;
+    font-family: 'Consolas', monospace; font-size: 0.88em;
+    overflow-x: auto; margin: 10px 0;
+    border: 1px solid #cfd8dc;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin: 10px 0;
+    font-size: 0.95em;
+    background: #ffffff;
+  }
+  th, td {
+    padding: 9px 12px; text-align: left;
+    border-bottom: 1px solid #cfd8dc;
+    vertical-align: top;
+  }
+  th { background: #e3f2fd; color: #1565c0; }
+  td { color: #37474f; }
+  td code { font-size: 0.85em; }
+  .flow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; margin: 18px 0; flex-wrap: wrap;
+  }
+  .flow-item {
+    background: #e3f2fd;
+    border: 2px solid #1565c0;
+    color: #1565c0;
+    padding: 12px 18px; border-radius: 6px;
+    text-align: center; min-width: 130px;
+    font-weight: 500;
+  }
+  .flow-arrow { color: #1565c0; font-size: 1.5em; }
+  .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px; margin: 10px 0;
+  }
+  .grid-3 {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px; margin: 10px 0;
+  }
+  .title-slide {
+    justify-content: center; align-items: center; text-align: center;
+    background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+  }
+  .title-slide h1 {
+    font-size: 3em; border: none;
+    background: linear-gradient(90deg, #1565c0, #2e7d32);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tag {
+    display: inline-block; padding: 2px 9px;
+    border-radius: 3px; font-size: 0.8em;
+    font-weight: bold; margin-left: 6px;
+  }
+  .tag.high { background: #c62828; color: white; }
+  .tag.med  { background: #ef6c00; color: white; }
+  .tag.low  { background: #2e7d32; color: white; }
+  .tag.new  { background: #6a1b9a; color: white; }
+
+  /* Diff styling for Slide 6 */
+  pre.diff {
+    line-height: 1.7;
+    background: #fafbfc;
+    padding: 16px 18px;
+    border: 1px solid #cfd8dc;
+    white-space: pre;
+    color: #37474f;
+  }
+  pre.diff span { display: inline; padding: 1px 4px; border-radius: 3px; }
+  .added   { background: #e8f5e9; color: #1b5e20; border-left: 3px solid #2e7d32; padding-left: 8px !important; }
+  .changed { background: #fff4e5; color: #bf360c; border-left: 3px solid #ef6c00; padding-left: 8px !important; }
+  .removed { background: #fdecea; color: #b71c1c; border-left: 3px solid #c62828; padding-left: 8px !important; text-decoration: line-through; text-decoration-color: #c62828; }
+  .kept    { color: #00695c; }
+  .why     { color: #78909c; font-style: italic; margin-left: 14px; background: transparent !important; border: none !important; text-decoration: none !important; }
+  .star    { color: #6a1b9a; font-weight: bold; background: transparent !important; border: none !important; text-decoration: none !important; }
+  .legend {
+    display: inline-block; padding: 3px 10px; border-radius: 3px;
+    font-size: 0.85em; font-weight: bold; margin-right: 8px;
+  }
+  .legend.added   { background: #e8f5e9; color: #1b5e20; border: 1px solid #2e7d32; }
+  .legend.changed { background: #fff4e5; color: #bf360c; border: 1px solid #ef6c00; }
+  .legend.removed { background: #fdecea; color: #b71c1c; border: 1px solid #c62828; }
+  .legend.kept    { background: #eceff1; color: #455a64; border: 1px solid #90a4ae; }
+
+  /* Param reference table */
+  table.params td:first-child { width: 28%; }
+  table.params td:nth-child(2) { width: 12%; text-align: center; font-family: 'Consolas', monospace; color: #00695c; }
+  table.params td:nth-child(3) { width: 12%; text-align: center; }
+  table.params tr.section-header td {
+    background: #eceff1; color: #1565c0;
+    font-weight: bold; font-size: 0.95em;
+    padding: 6px 12px;
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- Slide 1: Title -->
+  <div class="slide title-slide active">
+    <h1>MuleSoft ↔ SAP Connectivity</h1>
+    <p class="subtitle">Stale Connection Pool During SAP Zero-Downtime Maintenance</p>
+    <p style="color:#607d8b;">Issue Analysis, Gap Assessment & Proposed Resolution</p>
+  </div>
+
+  <!-- Slide 2: Current Situation -->
+  <div class="slide">
+    <h1>Current Situation</h1>
+    <div class="content">
+      <p>Our MuleSoft applications integrate with SAP using the <strong>MuleSoft SAP Connector</strong>, which internally uses the <strong>SAP JCo (Java Connector)</strong> library to make RFC calls.</p>
+
+      <h2>How SAP-Side Maintenance Works Today</h2>
+      <p>The SAP Basis team performs system maintenance using a <strong>Zero-Downtime / Downtime-Optimized approach</strong>. Instead of bringing the entire SAP system offline, individual application server instances are recycled in a rolling fashion behind a message server / logon group.</p>
+
+      <div class="box info">
+        <strong>From the SAP perspective:</strong> The system as a whole remains available throughout the maintenance window — there is no formal outage.
+      </div>
+
+      <h2>What We Observe on the MuleSoft Side</h2>
+      <ul>
+        <li>RFC calls from Mule begin <strong>failing intermittently or persistently</strong> after the maintenance window.</li>
+        <li>Failures <strong>do not self-heal</strong> — they continue indefinitely.</li>
+        <li>The <strong>only known recovery</strong> today is restarting the Mule application, which forces a fresh connection pool to be built.</li>
+      </ul>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 3: The Predicament -->
+  <div class="slide">
+    <h1>The Predicament</h1>
+    <div class="content">
+      <h2>Why This Is a Problem</h2>
+      <div class="grid-2">
+        <div class="box warn">
+          <h3 style="color:#c62828;">Operational Impact</h3>
+          <p>Manual application restarts are required after every SAP maintenance event — adding toil and delay to recovery.</p>
+        </div>
+        <div class="box warn">
+          <h3 style="color:#c62828;">Reliability Impact</h3>
+          <p>Integrations appear unreliable to downstream consumers despite SAP itself being technically "available."</p>
+        </div>
+        <div class="box warn">
+          <h3 style="color:#c62828;">Detection Gap</h3>
+          <p>The failures often surface only when a consumer reports them — there is no proactive recovery path.</p>
+        </div>
+        <div class="box warn">
+          <h3 style="color:#c62828;">Scaling Concern</h3>
+          <p>As more integrations are added, the blast radius of each maintenance window grows.</p>
+        </div>
+      </div>
+
+      <h2>The Underlying Behavior</h2>
+      <p>The JCo library maintains a <strong>client-side connection pool</strong> of long-lived TCP connections to SAP. When SAP recycles an app server during ZDM, those pooled connections become <strong>stale</strong> — but JCo does not always detect this proactively.</p>
+      <div class="box">
+        Result: every borrow from the pool returns a broken connection. Restarting Mule rebuilds the pool — which is why the restart "fixes" it.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 4: Technical Root Cause -->
+  <div class="slide">
+    <h1>Technical Root Cause</h1>
+    <div class="content">
+      <h2>How JCo's Connection Pool Behaves</h2>
+      <ul>
+        <li>JCo maintains pooled TCP connections to specific SAP app server instances.</li>
+        <li>It has <strong>no awareness</strong> of SAP-side ZDM, rolling restarts, or HA failovers.</li>
+        <li>It validates connections only conservatively (to avoid latency on every RFC call).</li>
+        <li>It only evicts a connection when an RFC call <strong>actually fails</strong> on it.</li>
+      </ul>
+
+      <h2>The Failure Sequence</h2>
+      <div class="flow">
+        <div class="flow-item">SAP recycles<br>app server</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">JCo socket<br>becomes stale</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">Pool still<br>hands it out</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">RFC call<br>fails</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">No retry →<br>error returned</div>
+      </div>
+
+      <div class="box info">
+        <strong>Key insight:</strong> This is <em>expected JCo behavior</em>, not a defect. SAP's own guidance assumes the client application will be configured and coded to handle it — through pool tuning, borrow-time validation, message-server load balancing, and retry-on-failure logic.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 5: Gap Analysis -->
+  <div class="slide">
+    <h1>Gap Analysis: Current Configuration</h1>
+    <div class="content">
+      <p>Reviewing our current SAP connector configuration against SAP/JCo best practices for ZDM-aware clients:</p>
+      <table>
+        <tr>
+          <th>Area</th>
+          <th>Current State</th>
+          <th>Gap</th>
+        </tr>
+        <tr>
+          <td>Message server + logon group</td>
+          <td>✅ Configured (<code>mshost</code>, <code>group=MULESOFT</code>)</td>
+          <td><span class="tag low">OK</span> — but conflicting <code>ashost</code> also set</td>
+        </tr>
+        <tr>
+          <td>Borrow-time connection validation</td>
+          <td>❌ Not enabled (<code>pool_check_connection</code>)</td>
+          <td><span class="tag high">HIGH</span> — most direct fix for stale conns</td>
+        </tr>
+        <tr>
+          <td>Connection expiration (idle reaping)</td>
+          <td>❌ Not configured</td>
+          <td><span class="tag high">HIGH</span> — stale connections never reaped</td>
+        </tr>
+        <tr>
+          <td>Pool sizing</td>
+          <td>❌ Using defaults</td>
+          <td><span class="tag med">MEDIUM</span> — unpredictable under load</td>
+        </tr>
+        <tr>
+          <td>Reconnection strategy</td>
+          <td>⚠️ 3 attempts × 10s (~30s window)</td>
+          <td><span class="tag med">MEDIUM</span> — too short for ZDM windows</td>
+        </tr>
+        <tr>
+          <td>Application-level retry on RFC errors</td>
+          <td>❌ Not implemented</td>
+          <td><span class="tag high">HIGH</span> — bad connections never get evicted mid-flow</td>
+        </tr>
+        <tr>
+          <td>Response timeout</td>
+          <td>⚠️ 30 seconds</td>
+          <td><span class="tag low">LOW</span> — may be tight on first post-ZDM call</td>
+        </tr>
+      </table>
+
+      <div class="box warn">
+        <strong>Bottom line:</strong> The three highest-impact gaps are <strong>missing borrow-time validation</strong>, <strong>missing pool expiration</strong>, and <strong>missing application-level retry</strong>. Together, they explain why a Mule restart is currently the only path to recovery.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 6: Resolution - Configuration (with diff highlighting) -->
+  <div class="slide">
+    <h1>Resolution — Part 1: Configuration</h1>
+    <div class="content">
+      <p style="margin-bottom:14px;">
+        <span class="legend added">+ Added</span>
+        <span class="legend changed">~ Changed</span>
+        <span class="legend removed">– Removed</span>
+        <span class="legend kept">&nbsp; Unchanged</span>
+        <span style="color:#6a1b9a; font-weight:bold; margin-left:6px;">★ = key fix</span>
+      </p>
+
+      <h2>Connection Settings</h2>
+      <pre class="diff">
+<span class="kept">client:           710</span>
+<span class="kept">lang:             EN</span>
+<span class="kept">system:           00</span>
+<span class="kept">user:             ID-RFC</span>
+<span class="removed">- host:           &lt;application-server&gt;</span>      <span class="why">← remove: conflicts with mshost & disables load balancing</span>
+<span class="changed">~ response timeout: 60000</span>                   <span class="why">← was 30000: first call after ZDM may take longer</span>
+<span class="kept">reconnection:</span>
+<span class="kept">  frequency: 10000</span>
+<span class="changed">~ attempts:  30</span>                              <span class="why">← was 3: extends recovery window from ~30s to ~5min</span>
+      </pre>
+
+      <h2>Extended Properties</h2>
+      <pre class="diff">
+<span class="kept">jco.client.group:  MULESOFT</span>
+<span class="kept">jco.client.mshost: &lt;message-server&gt;</span>
+<span class="kept">jco.client.msserv: 3601</span>
+<span class="added">+ jco.client.r3name: &lt;SID&gt;</span>                          <span class="why">← required with mshost in most JCo versions</span>
+
+<span class="added">+ # --- Pool tuning (NEW) ---</span>
+<span class="added">+ jco.destination.pool_check_connection:   1</span>         <span class="star">★</span> <span class="why">validate on borrow — DIRECT fix for stale conns</span>
+<span class="added">+ jco.destination.pool_capacity:           5</span>         <span class="why">← steady-state pooled connections (predictable sizing)</span>
+<span class="added">+ jco.destination.peak_limit:              10</span>        <span class="why">← max concurrent under load (prevents runaway)</span>
+<span class="added">+ jco.destination.expiration_time:         300000</span>    <span class="star">★</span> <span class="why">5 min idle eviction — secondary safety net</span>
+<span class="added">+ jco.destination.expiration_check_period: 60000</span>     <span class="why">← reaper runs every 1 min</span>
+<span class="added">+ jco.destination.max_get_client_time:     30000</span>     <span class="why">← bounded wait when pool is exhausted</span>
+
+<span class="kept">jco.server.max_startup_delay: 300</span>
+      </pre>
+
+      <div class="box good">
+        <strong>Why this works as layered defense:</strong> <code>pool_check_connection</code> validates each connection at borrow time — closing the window where stale sockets are handed out. <code>expiration_time</code> reaps idle connections in the background as a secondary safety net. The corrected message-server-only topology ensures replacement connections always target a healthy app server.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 7: Parameter Reference (NEW) -->
+  <div class="slide">
+    <h1>Parameter Reference</h1>
+    <div class="content">
+      <p>Detailed reference for all parameters introduced or modified by this resolution:</p>
+
+      <table class="params">
+        <tr>
+          <th>Parameter</th>
+          <th>Recommended Value</th>
+          <th>Status</th>
+          <th>Description &amp; Rationale</th>
+        </tr>
+
+        <tr class="section-header"><td colspan="4">Connection Topology</td></tr>
+        <tr>
+          <td><code>jco.client.mshost</code></td>
+          <td>&lt;message-server&gt;</td>
+          <td><span class="tag low">KEEP</span></td>
+          <td>Hostname of the SAP message server. Enables logon-group-based load balancing across app servers — essential for ZDM resilience.</td>
+        </tr>
+        <tr>
+          <td><code>jco.client.msserv</code></td>
+          <td>3601</td>
+          <td><span class="tag low">KEEP</span></td>
+          <td>Message server port. Standard SAP message server port for client communication.</td>
+        </tr>
+        <tr>
+          <td><code>jco.client.group</code></td>
+          <td>MULESOFT</td>
+          <td><span class="tag low">KEEP</span></td>
+          <td>Logon group name. JCo asks the message server for a healthy app server within this group at connect time.</td>
+        </tr>
+        <tr>
+          <td><code>jco.client.r3name</code></td>
+          <td>&lt;SID&gt;</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>SAP system ID (3 chars). Required alongside <code>mshost</code> in most JCo versions to identify the target system. Without it, message-server resolution may fail.</td>
+        </tr>
+        <tr>
+          <td><code>host</code> (ashost)</td>
+          <td>—</td>
+          <td><span class="tag high">REMOVE</span></td>
+          <td>Fixed app-server hostname. Conflicts with <code>mshost</code> — when both are set, JCo typically binds to the fixed host and bypasses load balancing entirely, defeating ZDM resilience.</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="4">Connection Pool Behavior — Key Fixes</td></tr>
+        <tr>
+          <td><code>jco.destination.pool_check_connection</code> ★</td>
+          <td>1</td>
+          <td><span class="tag new">ADD</span></td>
+          <td><strong>Validates each connection at borrow time</strong> with a lightweight ping. If the connection is stale, JCo discards it and provides a fresh one. Most direct mitigation for the ZDM stale-connection symptom. Adds a few ms of overhead per RFC call — generally negligible.</td>
+        </tr>
+        <tr>
+          <td><code>jco.destination.expiration_time</code> ★</td>
+          <td>300000 (5 min)</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>Maximum idle time (ms) before a pooled connection is closed by the background reaper. Acts as a secondary safety net so connections cycle naturally even if borrow-time validation is bypassed. Common range: 60000–300000.</td>
+        </tr>
+        <tr>
+          <td><code>jco.destination.expiration_check_period</code></td>
+          <td>60000 (1 min)</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>How often (ms) the reaper thread runs to check for expired connections. Should be ≤ <code>expiration_time</code>. Lower values reap faster at minimal CPU cost.</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="4">Connection Pool Sizing</td></tr>
+        <tr>
+          <td><code>jco.destination.pool_capacity</code></td>
+          <td>5</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>Steady-state size of the connection pool. Connections beyond this number are closed when idle. Set based on expected concurrency baseline.</td>
+        </tr>
+        <tr>
+          <td><code>jco.destination.peak_limit</code></td>
+          <td>10</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>Maximum concurrent connections allowed (including beyond <code>pool_capacity</code>). Prevents unbounded connection growth under load spikes. 0 = unlimited (not recommended).</td>
+        </tr>
+        <tr>
+          <td><code>jco.destination.max_get_client_time</code></td>
+          <td>30000 (30s)</td>
+          <td><span class="tag new">ADD</span></td>
+          <td>Maximum time (ms) a thread will wait for a connection when the pool is exhausted before throwing an exception. Prevents indefinite blocking under load.</td>
+        </tr>
+
+        <tr class="section-header"><td colspan="4">Reconnection &amp; Timeouts</td></tr>
+        <tr>
+          <td>response timeout</td>
+          <td>60000 (60s)</td>
+          <td><span class="tag med">CHANGE</span></td>
+          <td>Was 30000. RFC call timeout. Increased because the first call after a ZDM event may include re-authentication and session setup, which can briefly exceed 30s.</td>
+        </tr>
+        <tr>
+          <td>reconnection.attempts</td>
+          <td>30</td>
+          <td><span class="tag med">CHANGE</span></td>
+          <td>Was 3. With a 10s frequency, this extends the initial-connect retry window from ~30 seconds to ~5 minutes — comfortably covering most ZDM bounce windows.</td>
+        </tr>
+        <tr>
+          <td>reconnection.frequency</td>
+          <td>10000 (10s)</td>
+          <td><span class="tag low">KEEP</span></td>
+          <td>Wait between reconnection attempts. Current value is reasonable.</td>
+        </tr>
+      </table>
+
+      <div class="box info">
+        <strong>★ marks the two parameters that most directly resolve the stale-connection symptom.</strong> All other changes are supporting hardening — predictable pool sizing, longer recovery windows, and corrected topology.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 8: Resolution - Application Pattern -->
+  <div class="slide">
+    <h1>Resolution — Part 2: Application Pattern</h1>
+    <div class="content">
+      <h2>Add Retry Around SAP Operations</h2>
+      <p>Configuration alone isn't enough. Even with <code>pool_check_connection</code>, an app server can recycle <em>between</em> the validation ping and the actual RFC call. A retry ensures JCo evicts the bad connection and the next attempt succeeds with a fresh one.</p>
+
+      <pre>&lt;until-successful maxRetries="3" millisBetweenRetries="2000"&gt;
+   &lt;sap:invoke-function config-ref="SAP_Config" .../&gt;
+&lt;/until-successful&gt;</pre>
+
+      <h2>What Happens at Runtime</h2>
+      <div class="flow">
+        <div class="flow-item">Attempt 1<br>(stale conn)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">JCo evicts<br>bad socket</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item">Attempt 2<br>(fresh conn)</div>
+        <span class="flow-arrow">→</span>
+        <div class="flow-item" style="border-color:#2e7d32;background:#e8f5e9;color:#1b5e20;">Success ✓</div>
+      </div>
+
+      <div class="box good">
+        Recovery becomes <strong>transparent</strong> — no manual restart, no consumer-visible failure.
+      </div>
+
+      <h2>Three Layers of Defense</h2>
+      <div class="grid-3">
+        <div class="box">
+          <h3>1. Borrow-time check</h3>
+          <p><code>pool_check_connection</code> rejects stale connections before they're used.</p>
+        </div>
+        <div class="box">
+          <h3>2. Idle reaping</h3>
+          <p><code>expiration_time</code> closes idle connections in the background as a safety net.</p>
+        </div>
+        <div class="box">
+          <h3>3. Failure retry</h3>
+          <p><code>until-successful</code> recovers transparently if a connection fails mid-call.</p>
+        </div>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 9: Implementation Plan -->
+  <div class="slide">
+    <h1>Implementation Plan & Priorities</h1>
+    <div class="content">
+      <table>
+        <tr>
+          <th>Step</th>
+          <th>Action</th>
+          <th>Priority</th>
+          <th>Effort</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Enable <code>pool_check_connection = 1</code> (borrow-time validation)</td>
+          <td><span class="tag high">HIGH</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Add <code>expiration_time</code> + <code>expiration_check_period</code></td>
+          <td><span class="tag high">HIGH</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Wrap SAP operations with <code>until-successful</code> retry</td>
+          <td><span class="tag high">HIGH</span></td>
+          <td>Low–Medium</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Remove conflicting <code>ashost</code> entry; add <code>r3name</code></td>
+          <td><span class="tag med">MED</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Set explicit pool sizing (<code>pool_capacity</code>, <code>peak_limit</code>, <code>max_get_client_time</code>)</td>
+          <td><span class="tag med">MED</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Extend reconnection window (3 → 30 attempts)</td>
+          <td><span class="tag med">MED</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Increase response timeout to 60s</td>
+          <td><span class="tag low">LOW</span></td>
+          <td>Low</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td>Validation in non-prod with simulated ZDM (Basis-coordinated)</td>
+          <td><span class="tag high">HIGH</span></td>
+          <td>Medium</td>
+        </tr>
+      </table>
+
+      <h2>Expected Outcome</h2>
+      <div class="box good">
+        <ul>
+          <li>No more manual Mule restarts after SAP maintenance.</li>
+          <li>Transparent recovery from ZDM events — typically within seconds.</li>
+          <li>Predictable, observable connection pool behavior.</li>
+          <li>Foundation that scales as more SAP integrations are onboarded.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Slide 10: Summary -->
+  <div class="slide">
+    <h1>Summary</h1>
+    <div class="content">
+      <h2>The Issue</h2>
+      <p>JCo's connection pool retains stale connections after SAP zero-downtime maintenance, requiring a Mule application restart to recover.</p>
+
+      <h2>The Cause</h2>
+      <p>This is inherent JCo behavior — it does not detect SAP-side instance recycling. Without borrow-time validation, expiration tuning, and application-level retry, stale sockets persist indefinitely.</p>
+
+      <h2>The Fix — Three Layers of Defense</h2>
+      <div class="grid-3">
+        <div class="box good">
+          <h3>Validate</h3>
+          <p>Enable <code>pool_check_connection</code> to verify connections at borrow time.</p>
+        </div>
+        <div class="box good">
+          <h3>Reap</h3>
+          <p>Configure <code>expiration_time</code> so idle stale connections close automatically.</p>
+        </div>
+        <div class="box good">
+          <h3>Retry</h3>
+          <p>Wrap RFC calls in <code>until-successful</code> for transparent recovery on failure.</p>
+        </div>
+      </div>
+
+      <div class="box info" style="margin-top:20px;">
+        <strong>Net result:</strong> SAP zero-downtime maintenance becomes truly zero-downtime — for our integrations too.
+      </div>
+    </div>
+    <div class="footer">
+      <button class="nav-btn" onclick="prev()">← Previous</button>
+      <span class="counter"></span>
+      <button class="nav-btn" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const counters = document.querySelectorAll('.counter');
+
+  function show(i) {
+    slides.forEach(s => s.classList.remove('active'));
+    slides[i].classList.add('active');
+    counters.forEach(c => c.textContent = `Slide ${i + 1} of ${slides.length}`);
+    current = i;
+  }
+  function next() { if (current < slides.length - 1) show(current + 1); }
+  function prev() { if (current > 0) show(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') next();
+    if (e.key === 'ArrowLeft') prev();
+  });
+
+  show(0);
+</script>
+</body>
+</html>
