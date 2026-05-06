@@ -285,7 +285,7 @@
       </div>
 
       <div class="box info">
-        <strong>Key insight:</strong> This is <em>expected JCo behavior</em>, not a defect. SAP's own guidance assumes the client application will be configured and coded to handle it — through pool tuning, borrow-time validation, message-server load balancing, and retry-on-failure logic.
+        <strong>Key insight:</strong> This is <em>expected JCo behavior</em>, not a defect. SAP's own guidance assumes the client application will be configured and coded to handle it — through pool tuning, message-server load balancing, and retry-on-failure logic.
       </div>
     </div>
     <div class="footer">
@@ -356,7 +356,7 @@
 
   <!-- Slide 6: Resolution - Configuration (with diff highlighting) -->
   <div class="slide">
-    <h1>Resolution — Part 1: Configuration</h1>
+    <h1>Resolution — Configuration Changes</h1>
     <div class="content">
       <p style="margin-bottom:14px;">
         <span class="legend added">+ Added</span>
@@ -408,7 +408,7 @@
     </div>
   </div>
 
-  <!-- Slide 7: Parameter Reference (NEW) -->
+  <!-- Slide 7: Parameter Reference -->
   <div class="slide">
     <h1>Parameter Reference</h1>
     <div class="content">
@@ -526,56 +526,7 @@
     </div>
   </div>
 
-  <!-- Slide 8: Resolution - Application Pattern -->
-  <div class="slide">
-    <h1>Resolution — Part 2: Application Pattern</h1>
-    <div class="content">
-      <h2>Add Retry Around SAP Operations</h2>
-      <p>Configuration alone isn't enough. Even with <code>pool_check_connection</code>, an app server can recycle <em>between</em> the validation ping and the actual RFC call. A retry ensures JCo evicts the bad connection and the next attempt succeeds with a fresh one.</p>
-
-      <pre>&lt;until-successful maxRetries="3" millisBetweenRetries="2000"&gt;
-   &lt;sap:invoke-function config-ref="SAP_Config" .../&gt;
-&lt;/until-successful&gt;</pre>
-
-      <h2>What Happens at Runtime</h2>
-      <div class="flow">
-        <div class="flow-item">Attempt 1<br>(stale conn)</div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-item">JCo evicts<br>bad socket</div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-item">Attempt 2<br>(fresh conn)</div>
-        <span class="flow-arrow">→</span>
-        <div class="flow-item" style="border-color:#2e7d32;background:#e8f5e9;color:#1b5e20;">Success ✓</div>
-      </div>
-
-      <div class="box good">
-        Recovery becomes <strong>transparent</strong> — no manual restart, no consumer-visible failure.
-      </div>
-
-      <h2>Three Layers of Defense</h2>
-      <div class="grid-3">
-        <div class="box">
-          <h3>1. Borrow-time check</h3>
-          <p><code>pool_check_connection</code> rejects stale connections before they're used.</p>
-        </div>
-        <div class="box">
-          <h3>2. Idle reaping</h3>
-          <p><code>expiration_time</code> closes idle connections in the background as a safety net.</p>
-        </div>
-        <div class="box">
-          <h3>3. Failure retry</h3>
-          <p><code>until-successful</code> recovers transparently if a connection fails mid-call.</p>
-        </div>
-      </div>
-    </div>
-    <div class="footer">
-      <button class="nav-btn" onclick="prev()">← Previous</button>
-      <span class="counter"></span>
-      <button class="nav-btn" onclick="next()">Next →</button>
-    </div>
-  </div>
-
-  <!-- Slide 9: Implementation Plan -->
+  <!-- Slide 8: Implementation Plan -->
   <div class="slide">
     <h1>Implementation Plan & Priorities</h1>
     <div class="content">
@@ -653,7 +604,7 @@
     </div>
   </div>
 
-  <!-- Slide 10: Summary -->
+  <!-- Slide 9: Summary -->
   <div class="slide">
     <h1>Summary</h1>
     <div class="content">
@@ -661,7 +612,7 @@
       <p>JCo's connection pool retains stale connections after SAP zero-downtime maintenance, requiring a Mule application restart to recover.</p>
 
       <h2>The Cause</h2>
-      <p>This is inherent JCo behavior — it does not detect SAP-side instance recycling. Without borrow-time validation, expiration tuning, and application-level retry, stale sockets persist indefinitely.</p>
+      <p>This is inherent JCo behavior — it does not detect SAP-side instance recycling. Without expiration tuning and application-level retry, stale sockets persist indefinitely.</p>
 
       <h2>The Fix — Three Layers of Defense</h2>
       <div class="grid-3">
